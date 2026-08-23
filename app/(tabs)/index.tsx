@@ -19,7 +19,10 @@ type SleepEntry = {
 
 const STORAGE_KEY = 'ridereset.latestSleep';
 
-function calculateRecovery(sleep: SleepEntry | null) {
+function calculateRecovery(
+  sleep: SleepEntry | null,
+  ride: IntervalsActivity | null
+) {
   if (!sleep) {
     return {
       score: 60,
@@ -28,7 +31,7 @@ function calculateRecovery(sleep: SleepEntry | null) {
       rideType: 'Easy ride or rest',
       rideDetails: 'Log your sleep first',
       reason:
-        'RideReset needs your sleep duration and quality before suggesting your next session.',
+        'RideReset needs sleep data before combining it with your recent training load.',
     };
   }
 
@@ -49,10 +52,40 @@ function calculateRecovery(sleep: SleepEntry | null) {
     Great: 25,
   };
 
-  const score = Math.min(
+  let score = Math.min(
     100,
     40 + durationPoints + qualityPoints[sleep.quality]
   );
+
+  if (ride) {
+    const rideTime = new Date(ride.start_date_local).getTime();
+    const hoursSinceRide = (Date.now() - rideTime) / 3_600_000;
+
+    if (
+      !Number.isNaN(hoursSinceRide) &&
+      hoursSinceRide >= 0 &&
+      hoursSinceRide <= 72
+    ) {
+      const load = ride.icu_training_load ?? 0;
+      let loadPenalty = 0;
+
+      if (load >= 120) {
+        loadPenalty = 20;
+      } else if (load >= 90) {
+        loadPenalty = 14;
+      } else if (load >= 60) {
+        loadPenalty = 8;
+      } else if (load > 0) {
+        loadPenalty = 4;
+      } else if ((ride.moving_time ?? 0) >= 7200) {
+        loadPenalty = 8;
+      } else if ((ride.moving_time ?? 0) >= 3600) {
+        loadPenalty = 4;
+      }
+
+      score = Math.max(0, score - loadPenalty);
+    }
+  }
 
   if (score >= 85) {
     return {
@@ -62,7 +95,7 @@ function calculateRecovery(sleep: SleepEntry | null) {
       rideType: 'Endurance or planned workout',
       rideDetails: 'Tomorrow · 60–90 minutes',
       reason:
-        'Your sleep supports a normal training session. Adjust if your legs still feel unusually fatigued.',
+        'Your sleep and recent training load support a normal session. Adjust if your legs feel unusually fatigued.',
     };
   }
 
@@ -74,7 +107,7 @@ function calculateRecovery(sleep: SleepEntry | null) {
       rideType: 'Easy Zone 2',
       rideDetails: 'Tomorrow · 45–60 minutes',
       reason:
-        'Keep the effort conversational while your body absorbs your recent training.',
+        'Your sleep and recent ride suggest keeping the next session conversational.',
     };
   }
 
@@ -86,7 +119,7 @@ function calculateRecovery(sleep: SleepEntry | null) {
       rideType: 'Recovery spin',
       rideDetails: 'Tomorrow · 30–45 minutes',
       reason:
-        'Your sleep suggests reducing intensity. Keep the ride light and reassess how you feel.',
+        'Your sleep and recent training load suggest reducing intensity while recovery continues.',
     };
   }
 
@@ -97,7 +130,7 @@ function calculateRecovery(sleep: SleepEntry | null) {
     rideType: 'Rest day',
     rideDetails: 'No structured training',
     reason:
-      'Short or poor-quality sleep may limit recovery. Consider resting and checking again tomorrow.',
+      'Your recent training load and sleep suggest prioritizing recovery before another structured session.',
   };
 }
 
@@ -176,7 +209,7 @@ export default function HomeScreen() {
     }
   }
 
-  const recovery = calculateRecovery(sleep);
+  const recovery = calculateRecovery(sleep, ride);
 
   const averagePower =
     ride?.average_watts ??

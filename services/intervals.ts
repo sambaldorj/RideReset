@@ -1,4 +1,4 @@
-import { Buffer } from 'buffer';
+import Constants from 'expo-constants';
 
 export type IntervalsActivity = {
   id: string;
@@ -18,51 +18,83 @@ export type IntervalsActivity = {
   total_elevation_gain?: number;
 };
 
-function formatDate(date: Date) {
-  const localDate = new Date(
-    date.getTime() - date.getTimezoneOffset() * 60_000
-  );
+type BackendRide = {
+  id: string;
+  name: string;
+  type: string;
+  startDate: string;
+  distanceMiles: number | null;
+  movingMinutes: number | null;
+  averageWatts: number | null;
+  averageHeartRate: number | null;
+  elevationGainFeet: number | null;
+  trainingLoad: number | null;
+};
 
-  return localDate.toISOString().slice(0, 10);
+type LatestRideResponse = {
+  ride: BackendRide | null;
+};
+
+function getServerAddress() {
+  const hostUri = Constants.expoConfig?.hostUri;
+
+  if (!hostUri) {
+    throw new Error('Could not determine the development server address.');
+  }
+
+  const host = hostUri.replace(/^https?:\/\//, '').split(':')[0];
+
+  return `http://${host}:3000`;
 }
 
 export async function getLatestRide(): Promise<IntervalsActivity | null> {
-  const apiKey = process.env.EXPO_PUBLIC_INTERVALS_API_KEY;
-
-  if (!apiKey) {
-    throw new Error('Intervals.icu API key is missing.');
-  }
-
-  const newest = new Date();
-  const oldest = new Date();
-  oldest.setFullYear(oldest.getFullYear() - 1);
-
-  const authorization = Buffer.from(`API_KEY:${apiKey}`).toString('base64');
-
-  const url =
-    `https://intervals.icu/api/v1/athlete/0/activities` +
-    `?oldest=${formatDate(oldest)}&newest=${formatDate(newest)}`;
-
-  const response = await fetch(url, {
-    headers: {
-      Authorization: `Basic ${authorization}`,
-      Accept: 'application/json',
-    },
-  });
+  const response = await fetch(
+    `${getServerAddress()}/api/latest-ride`
+  );
 
   if (!response.ok) {
-    throw new Error(`Intervals.icu request failed: ${response.status}`);
+    throw new Error(`RideReset server request failed: ${response.status}`);
   }
 
-  const activities: IntervalsActivity[] = await response.json();
+  const data: LatestRideResponse = await response.json();
+  const ride = data.ride;
 
-  const rides = activities
-    .filter((activity) => activity.type === 'Ride')
-    .sort(
-      (a, b) =>
-        new Date(b.start_date_local).getTime() -
-        new Date(a.start_date_local).getTime()
-    );
+  if (!ride) {
+    return null;
+  }
 
-  return rides[0] ?? null;
+  return {
+    id: ride.id,
+    name: ride.name,
+    type: ride.type,
+    start_date_local: ride.startDate,
+
+    distance:
+      ride.distanceMiles !== null
+        ? ride.distanceMiles * 1609.344
+        : undefined,
+
+    moving_time:
+      ride.movingMinutes !== null
+        ? ride.movingMinutes * 60
+        : undefined,
+
+    elapsed_time:
+      ride.movingMinutes !== null
+        ? ride.movingMinutes * 60
+        : undefined,
+
+    average_watts: ride.averageWatts ?? undefined,
+    icu_average_watts: ride.averageWatts ?? undefined,
+
+    average_heartrate: ride.averageHeartRate ?? undefined,
+    icu_average_hr: ride.averageHeartRate ?? undefined,
+
+    total_elevation_gain:
+      ride.elevationGainFeet !== null
+        ? ride.elevationGainFeet / 3.28084
+        : undefined,
+
+    icu_training_load: ride.trainingLoad ?? undefined,
+  };
 }
