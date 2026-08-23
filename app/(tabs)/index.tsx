@@ -1,8 +1,13 @@
-import { useCallback, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StatusBar } from 'expo-status-bar';
 import { useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
+
+import {
+  getLatestRide,
+  type IntervalsActivity,
+} from '../../services/intervals';
 
 type SleepQuality = 'Poor' | 'Fair' | 'Good' | 'Great';
 
@@ -96,12 +101,51 @@ function calculateRecovery(sleep: SleepEntry | null) {
   };
 }
 
+function formatDistance(distance?: number) {
+  if (distance === undefined) {
+    return '—';
+  }
+
+  return (distance / 1609.344).toFixed(1);
+}
+
+function formatDuration(seconds?: number) {
+  if (seconds === undefined) {
+    return '—';
+  }
+
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.round((seconds % 3600) / 60);
+
+  if (hours === 0) {
+    return `${minutes}m`;
+  }
+
+  return `${hours}h ${minutes}m`;
+}
+
+function formatRideDate(date?: string) {
+  if (!date) {
+    return 'Date unavailable';
+  }
+
+  return new Date(date).toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
 export default function HomeScreen() {
   const [sleep, setSleep] = useState<SleepEntry | null>(null);
+  const [ride, setRide] = useState<IntervalsActivity | null>(null);
+  const [rideLoading, setRideLoading] = useState(true);
+  const [rideError, setRideError] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
-      loadSleep();
+      void loadSleep();
+      void loadRide();
     }, [])
   );
 
@@ -117,7 +161,31 @@ export default function HomeScreen() {
     }
   }
 
+  async function loadRide() {
+    try {
+      setRideLoading(true);
+      setRideError(false);
+
+      const latestRide = await getLatestRide();
+      setRide(latestRide);
+    } catch (error) {
+      console.error('Could not load ride:', error);
+      setRideError(true);
+    } finally {
+      setRideLoading(false);
+    }
+  }
+
   const recovery = calculateRecovery(sleep);
+
+  const averagePower =
+    ride?.average_watts ??
+    ride?.icu_average_watts ??
+    ride?.icu_weighted_avg_watts ??
+    ride?.weighted_average_watts;
+
+  const averageHeartRate =
+    ride?.average_heartrate ?? ride?.icu_average_hr;
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
@@ -164,25 +232,61 @@ export default function HomeScreen() {
       <Text style={styles.sectionTitle}>Latest ride</Text>
 
       <View style={styles.card}>
-        <Text style={styles.rideTitle}>Morning Road Ride</Text>
-        <Text style={styles.rideDate}>Demo activity</Text>
+        {rideLoading ? (
+          <Text style={styles.rideMessage}>Loading your latest ride...</Text>
+        ) : rideError ? (
+          <Text style={styles.errorMessage}>
+            RideReset could not load your Intervals.icu activity.
+          </Text>
+        ) : ride ? (
+          <>
+            <Text style={styles.rideTitle}>
+              {ride.name || 'Cycling activity'}
+            </Text>
 
-        <View style={styles.statsRow}>
-          <View>
-            <Text style={styles.statValue}>28.4</Text>
-            <Text style={styles.statLabel}>Miles</Text>
-          </View>
+            <Text style={styles.rideDate}>
+              {formatRideDate(ride.start_date_local)} · Intervals.icu
+            </Text>
 
-          <View>
-            <Text style={styles.statValue}>1h 42m</Text>
-            <Text style={styles.statLabel}>Time</Text>
-          </View>
+            <View style={styles.statsRow}>
+              <View>
+                <Text style={styles.statValue}>
+                  {formatDistance(ride.distance)}
+                </Text>
+                <Text style={styles.statLabel}>Miles</Text>
+              </View>
 
-          <View>
-            <Text style={styles.statValue}>173 W</Text>
-            <Text style={styles.statLabel}>Avg power</Text>
-          </View>
-        </View>
+              <View>
+                <Text style={styles.statValue}>
+                  {formatDuration(ride.moving_time)}
+                </Text>
+                <Text style={styles.statLabel}>Time</Text>
+              </View>
+
+              <View>
+                <Text style={styles.statValue}>
+                  {averagePower ? `${Math.round(averagePower)} W` : '—'}
+                </Text>
+                <Text style={styles.statLabel}>Avg power</Text>
+              </View>
+            </View>
+
+            {(averageHeartRate || ride.icu_training_load) && (
+              <Text style={styles.rideMeta}>
+                {averageHeartRate
+                  ? `${Math.round(averageHeartRate)} bpm average`
+                  : 'Heart rate unavailable'}
+                {ride.icu_training_load
+                  ? ` · Load ${Math.round(ride.icu_training_load)}`
+                  : ''}
+              </Text>
+            )}
+          </>
+        ) : (
+          <Text style={styles.rideMessage}>
+            No cycling activity was found.
+          </Text>
+        )}
       </View>
 
       <Text style={styles.sectionTitle}>Recommended next steps</Text>
@@ -224,9 +328,11 @@ export default function HomeScreen() {
 
       <View style={styles.nextRideCard}>
         <Text style={styles.nextRideType}>{recovery.rideType}</Text>
+
         <Text style={styles.nextRideDetails}>
           {recovery.rideDetails}
         </Text>
+
         <Text style={styles.nextRideReason}>{recovery.reason}</Text>
       </View>
 
@@ -360,6 +466,20 @@ const styles = StyleSheet.create({
     color: '#83948F',
     fontSize: 12,
     marginTop: 4,
+  },
+  rideMeta: {
+    color: '#8AA69E',
+    fontSize: 12,
+    marginTop: 18,
+  },
+  rideMessage: {
+    color: '#A9BAB5',
+    fontSize: 15,
+  },
+  errorMessage: {
+    color: '#FF8A8A',
+    fontSize: 14,
+    lineHeight: 20,
   },
   actionCard: {
     backgroundColor: '#10201C',
