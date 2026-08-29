@@ -1,8 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { StatusBar } from 'expo-status-bar';
 import { useFocusEffect } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import { useCallback, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
   getLatestRide,
@@ -220,353 +221,557 @@ export default function HomeScreen() {
   const averageHeartRate =
     ride?.average_heartrate ?? ride?.icu_average_hr;
 
+  const todayLabel = new Date().toLocaleDateString('en-US', {
+  weekday: 'short',
+  month: 'short',
+  day: 'numeric',
+});
+
   return (
+  <SafeAreaView style={styles.safeArea} edges={['top']}>
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <StatusBar style="light" />
+    <StatusBar style="light" />
 
+    <View style={styles.headerRow}>
       <Text style={styles.logo}>RIDERESET</Text>
-      <Text style={styles.heading}>Good morning, Sam</Text>
-      <Text style={styles.subtitle}>
-        Here’s how your recovery is looking.
-      </Text>
+      <Text style={styles.date}>{todayLabel}</Text>
+    </View>
 
-      <View style={styles.recoveryCard}>
-        <View style={styles.recoveryInfo}>
-          <Text style={styles.cardLabel}>RECOVERY SCORE</Text>
+    <Text style={styles.heading}>Recovery</Text>
+    <Text style={styles.subtitle}>
+      Sleep and training readiness at a glance.
+    </Text>
+
+    <View style={styles.recoveryPanel}>
+      <View style={styles.recoveryTopRow}>
+        <View style={styles.scoreGroup}>
           <Text style={styles.score}>{recovery.score}</Text>
 
-          <Text style={[styles.recoveryStatus, { color: recovery.color }]}>
-            {recovery.status}
-          </Text>
+          <View style={styles.scoreMeta}>
+            <Text style={styles.cardLabel}>RECOVERY SCORE</Text>
+            <Text
+              style={[
+                styles.recoveryStatus,
+                { color: recovery.color },
+              ]}
+            >
+              {recovery.status}
+            </Text>
+          </View>
         </View>
+      </View>
 
+      <View style={styles.progressTrack}>
         <View
           style={[
-            styles.scoreCircle,
+            styles.progressFill,
             {
-              borderColor: recovery.color,
+              width: `${recovery.score}%`,
+              backgroundColor: recovery.color,
             },
           ]}
-        >
-          <Text style={styles.scorePercent}>{recovery.score}%</Text>
+        />
+      </View>
+
+      <View style={styles.metricRow}>
+        <View style={styles.metric}>
+          <Text style={styles.metricLabel}>SLEEP</Text>
+          <Text style={styles.metricValue}>
+            {sleep ? `${sleep.hours} hr` : 'Not logged'}
+          </Text>
+          <Text style={styles.metricSubvalue}>
+            {sleep ? sleep.quality : 'Add last night’s sleep'}
+          </Text>
+        </View>
+
+        <View style={styles.metricDivider} />
+
+        <View style={styles.metric}>
+          <Text style={styles.metricLabel}>RECENT LOAD</Text>
+          <Text style={styles.metricValue}>
+            {ride?.icu_training_load
+              ? Math.round(ride.icu_training_load)
+              : '—'}
+          </Text>
+          <Text style={styles.metricSubvalue}>
+            {ride ? 'Intervals.icu' : 'No recent activity'}
+          </Text>
         </View>
       </View>
+    </View>
 
-      <View style={styles.sleepSummary}>
-        <Text style={styles.sleepSummaryLabel}>LAST NIGHT</Text>
+    <View style={styles.sectionHeader}>
+      <Text style={styles.sectionTitle}>Latest activity</Text>
+      <Text style={styles.sourcePill}>INTERVALS.ICU</Text>
+    </View>
 
-        <Text style={styles.sleepSummaryValue}>
-          {sleep
-            ? `${sleep.hours} hours · ${sleep.quality} quality`
-            : 'No sleep logged'}
+    <View style={styles.card}>
+      {rideLoading ? (
+        <Text style={styles.rideMessage}>
+          Loading your latest ride...
         </Text>
-      </View>
-
-      <Text style={styles.sectionTitle}>Latest ride</Text>
-
-      <View style={styles.card}>
-        {rideLoading ? (
-          <Text style={styles.rideMessage}>Loading your latest ride...</Text>
-        ) : rideError ? (
-          <Text style={styles.errorMessage}>
-            RideReset could not load your Intervals.icu activity.
+      ) : rideError ? (
+        <Text style={styles.errorMessage}>
+          RideReset could not load your Intervals.icu activity.
+        </Text>
+      ) : ride ? (
+        <>
+          <Text style={styles.rideTitle}>
+            {ride.name || 'Cycling activity'}
           </Text>
-        ) : ride ? (
-          <>
-            <Text style={styles.rideTitle}>
-              {ride.name || 'Cycling activity'}
-            </Text>
 
-            <Text style={styles.rideDate}>
-              {formatRideDate(ride.start_date_local)} · Intervals.icu
-            </Text>
+          <Text style={styles.rideDate}>
+            {formatRideDate(ride.start_date_local)}
+          </Text>
 
-            <View style={styles.statsRow}>
-              <View>
-                <Text style={styles.statValue}>
-                  {formatDistance(ride.distance)}
-                </Text>
-                <Text style={styles.statLabel}>Miles</Text>
-              </View>
-
-              <View>
-                <Text style={styles.statValue}>
-                  {formatDuration(ride.moving_time)}
-                </Text>
-                <Text style={styles.statLabel}>Time</Text>
-              </View>
-
-              <View>
-                <Text style={styles.statValue}>
-                  {averagePower ? `${Math.round(averagePower)} W` : '—'}
-                </Text>
-                <Text style={styles.statLabel}>Avg power</Text>
-              </View>
+          <View style={styles.statsRow}>
+            <View style={styles.statCell}>
+              <Text style={styles.statValue}>
+                {formatDistance(ride.distance)}
+              </Text>
+              <Text style={styles.statLabel}>MILES</Text>
             </View>
 
-            {(averageHeartRate || ride.icu_training_load) && (
-              <Text style={styles.rideMeta}>
-                {averageHeartRate
-                  ? `${Math.round(averageHeartRate)} bpm average`
-                  : 'Heart rate unavailable'}
-                {ride.icu_training_load
-                  ? ` · Load ${Math.round(ride.icu_training_load)}`
-                  : ''}
+            <View style={[styles.statCell, styles.statCellBorder]}>
+              <Text style={styles.statValue}>
+                {formatDuration(ride.moving_time)}
               </Text>
-            )}
-          </>
-        ) : (
-          <Text style={styles.rideMessage}>
-            No cycling activity was found.
-          </Text>
-        )}
-      </View>
+              <Text style={styles.statLabel}>MOVING</Text>
+            </View>
 
-      <Text style={styles.sectionTitle}>Recommended next steps</Text>
+            <View style={[styles.statCell, styles.statCellBorder]}>
+              <Text style={styles.statValue}>
+                {averagePower ? `${Math.round(averagePower)} W` : '—'}
+              </Text>
+              <Text style={styles.statLabel}>AVG POWER</Text>
+            </View>
+          </View>
 
-      <View style={styles.actionCard}>
-        <Text style={styles.actionIcon}>💧</Text>
+          <View style={styles.rideMetaRow}>
+            <Text style={styles.rideMeta}>
+              {averageHeartRate
+                ? `${Math.round(averageHeartRate)} bpm avg`
+                : 'Heart rate unavailable'}
+            </Text>
+
+            <Text style={styles.rideMeta}>
+              {ride.icu_training_load
+                ? `Load ${Math.round(ride.icu_training_load)}`
+                : ''}
+            </Text>
+          </View>
+        </>
+      ) : (
+        <Text style={styles.rideMessage}>
+          No cycling activity was found.
+        </Text>
+      )}
+    </View>
+
+    <Text style={styles.sectionTitle}>Today</Text>
+
+    <View style={styles.actionList}>
+      <View style={styles.actionRow}>
+        <Text style={styles.actionNumber}>01</Text>
 
         <View style={styles.actionText}>
-          <Text style={styles.actionTitle}>Rehydrate</Text>
+          <Text style={styles.actionTitle}>Hydration</Text>
           <Text style={styles.actionDescription}>
-            Begin replacing the fluid lost during your ride.
+            Replace fluids throughout the day.
           </Text>
         </View>
+
+        <Text style={styles.actionArrow}>›</Text>
       </View>
 
-      <View style={styles.actionCard}>
-        <Text style={styles.actionIcon}>🥣</Text>
+      <View style={styles.actionRow}>
+        <Text style={styles.actionNumber}>02</Text>
 
         <View style={styles.actionText}>
-          <Text style={styles.actionTitle}>Refuel</Text>
+          <Text style={styles.actionTitle}>Nutrition</Text>
           <Text style={styles.actionDescription}>
-            Eat a balanced meal containing carbohydrates and protein.
+            Prioritize carbohydrates and protein.
           </Text>
         </View>
+
+        <Text style={styles.actionArrow}>›</Text>
       </View>
 
-      <View style={styles.actionCard}>
-        <Text style={styles.actionIcon}>🧘</Text>
+      <View style={styles.actionRow}>
+        <Text style={styles.actionNumber}>03</Text>
 
         <View style={styles.actionText}>
           <Text style={styles.actionTitle}>Mobility</Text>
           <Text style={styles.actionDescription}>
-            Complete an easy eight-minute post-ride routine.
+            Keep movement easy for 5–10 minutes.
           </Text>
         </View>
+
+        <Text style={styles.actionArrow}>›</Text>
       </View>
+    </View>
 
-      <Text style={styles.sectionTitle}>Suggested next ride</Text>
+    <Text style={styles.sectionTitle}>Next session</Text>
 
-      <View style={styles.nextRideCard}>
-        <Text style={styles.nextRideType}>{recovery.rideType}</Text>
+    <View style={styles.nextRideCard}>
+      <Text style={styles.nextRideEyebrow}>RECOMMENDATION</Text>
 
-        <Text style={styles.nextRideDetails}>
-          {recovery.rideDetails}
-        </Text>
-
-        <Text style={styles.nextRideReason}>{recovery.reason}</Text>
-      </View>
-
-      <Text style={styles.disclaimer}>
-        Prototype guidance only. Your perceived fatigue, pain, illness and
-        other health factors should take priority.
+      <Text style={styles.nextRideType}>
+        {recovery.rideType}
       </Text>
-    </ScrollView>
-  );
+
+      <Text style={styles.nextRideDetails}>
+        {recovery.rideDetails}
+      </Text>
+
+      <Text style={styles.nextRideReason}>
+        {recovery.reason}
+      </Text>
+    </View>
+
+    <Text style={styles.disclaimer}>
+      Prototype guidance only. Perceived fatigue, pain, illness and other
+      health factors should take priority.
+    </Text>
+      </ScrollView>
+  </SafeAreaView>
+);
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+  flex: 1,
+  backgroundColor: '#09110F',
+},
+
   screen: {
     flex: 1,
-    backgroundColor: '#071512',
+    backgroundColor: '#09110F',
   },
+
   content: {
-    paddingTop: 70,
-    paddingHorizontal: 20,
-    paddingBottom: 50,
+    paddingTop: 28,
+    paddingHorizontal: 24,
+    paddingBottom: 60,
+    width: '100%',
+    maxWidth: 1100,
+    alignSelf: 'center',
   },
+
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+
   logo: {
-    color: '#4BE39A',
-    fontSize: 15,
+    color: '#55DFA0',
+    fontSize: 13,
     fontWeight: '800',
-    letterSpacing: 2,
+    letterSpacing: 2.4,
   },
+
+  date: {
+    color: '#73827D',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+
   heading: {
-    color: '#FFFFFF',
-    fontSize: 30,
+    color: '#F5F7F6',
+    fontSize: 34,
     fontWeight: '800',
-    marginTop: 12,
+    marginTop: 28,
   },
+
   subtitle: {
-    color: '#92A6A0',
-    fontSize: 16,
+    color: '#84918D',
+    fontSize: 15,
     marginTop: 6,
-    marginBottom: 24,
+    marginBottom: 28,
   },
-  recoveryCard: {
-    backgroundColor: '#102A24',
-    borderRadius: 22,
-    padding: 22,
+
+  recoveryPanel: {
+    backgroundColor: '#101A17',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#1C2B26',
+    padding: 24,
+  },
+
+  recoveryTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  recoveryInfo: {
-    flex: 1,
-  },
-  cardLabel: {
-    color: '#80A098',
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 1,
-  },
-  score: {
-    color: '#FFFFFF',
-    fontSize: 52,
-    fontWeight: '800',
-    marginTop: 4,
-  },
-  recoveryStatus: {
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  scoreCircle: {
-    width: 82,
-    height: 82,
-    borderRadius: 41,
-    borderWidth: 8,
+
+  scoreGroup: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
   },
-  scorePercent: {
-    color: '#FFFFFF',
-    fontSize: 18,
+
+  score: {
+    color: '#F7F9F8',
+    fontSize: 58,
     fontWeight: '800',
+    letterSpacing: -2,
   },
-  sleepSummary: {
-    backgroundColor: '#0D211C',
-    borderRadius: 14,
-    padding: 16,
-    marginTop: 12,
+
+  scoreMeta: {
+    marginLeft: 20,
   },
-  sleepSummaryLabel: {
-    color: '#6F817B',
+
+  cardLabel: {
+    color: '#6E817A',
     fontSize: 11,
     fontWeight: '700',
-    letterSpacing: 1,
+    letterSpacing: 1.3,
   },
-  sleepSummaryValue: {
-    color: '#FFFFFF',
+
+  recoveryStatus: {
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: '700',
     marginTop: 5,
   },
-  sectionTitle: {
-    color: '#FFFFFF',
-    fontSize: 20,
+
+  progressTrack: {
+    height: 4,
+    backgroundColor: '#22302C',
+    borderRadius: 2,
+    marginTop: 20,
+    overflow: 'hidden',
+  },
+
+  progressFill: {
+    height: 4,
+    borderRadius: 2,
+  },
+
+  metricRow: {
+    flexDirection: 'row',
+    marginTop: 24,
+  },
+
+  metric: {
+    flex: 1,
+  },
+
+  metricDivider: {
+    width: 1,
+    backgroundColor: '#26332F',
+    marginHorizontal: 24,
+  },
+
+  metricLabel: {
+    color: '#6E817A',
+    fontSize: 10,
     fontWeight: '700',
-    marginTop: 28,
-    marginBottom: 12,
+    letterSpacing: 1.2,
   },
-  card: {
-    backgroundColor: '#10201C',
-    borderRadius: 18,
-    padding: 20,
-  },
-  rideTitle: {
-    color: '#FFFFFF',
-    fontSize: 18,
+
+  metricValue: {
+    color: '#F2F5F4',
+    fontSize: 19,
     fontWeight: '700',
+    marginTop: 7,
   },
-  rideDate: {
-    color: '#83948F',
-    fontSize: 13,
-    marginTop: 4,
+
+  metricSubvalue: {
+    color: '#74857F',
+    fontSize: 12,
+    marginTop: 3,
   },
-  statsRow: {
+
+  sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 22,
+    alignItems: 'center',
+    marginTop: 34,
+    marginBottom: 12,
   },
-  statValue: {
-    color: '#FFFFFF',
-    fontSize: 18,
+
+  sectionTitle: {
+    color: '#F0F3F2',
+    fontSize: 17,
+    fontWeight: '700',
+    marginTop: 34,
+    marginBottom: 12,
+  },
+
+  sourcePill: {
+    color: '#55DFA0',
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1,
+    marginTop: 34,
+  },
+
+  card: {
+    backgroundColor: '#101815',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#1B2924',
+    padding: 22,
+  },
+
+  rideTitle: {
+    color: '#F5F7F6',
+    fontSize: 21,
     fontWeight: '700',
   },
+
+  rideDate: {
+    color: '#71827C',
+    fontSize: 13,
+    marginTop: 5,
+  },
+
+  statsRow: {
+    flexDirection: 'row',
+    marginTop: 26,
+    borderTopWidth: 1,
+    borderTopColor: '#22302B',
+    borderBottomWidth: 1,
+    borderBottomColor: '#22302B',
+  },
+
+  statCell: {
+    flex: 1,
+    paddingVertical: 18,
+  },
+
+  statCellBorder: {
+    borderLeftWidth: 1,
+    borderLeftColor: '#22302B',
+    paddingLeft: 20,
+  },
+
+  statValue: {
+    color: '#F5F7F6',
+    fontSize: 22,
+    fontWeight: '700',
+  },
+
   statLabel: {
-    color: '#83948F',
-    fontSize: 12,
-    marginTop: 4,
+    color: '#687A74',
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1,
+    marginTop: 5,
   },
+
+  rideMetaRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 16,
+  },
+
   rideMeta: {
-    color: '#8AA69E',
+    color: '#758780',
     fontSize: 12,
-    marginTop: 18,
   },
+
   rideMessage: {
-    color: '#A9BAB5',
-    fontSize: 15,
+    color: '#9AA9A4',
+    fontSize: 14,
   },
+
   errorMessage: {
-    color: '#FF8A8A',
+    color: '#E78282',
     fontSize: 14,
     lineHeight: 20,
   },
-  actionCard: {
-    backgroundColor: '#10201C',
-    borderRadius: 16,
-    padding: 16,
+
+  actionList: {
+    backgroundColor: '#101815',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#1B2924',
+    overflow: 'hidden',
+  },
+
+  actionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
+    paddingVertical: 17,
+    paddingHorizontal: 18,
+    borderBottomWidth: 1,
+    borderBottomColor: '#1C2925',
   },
-  actionIcon: {
-    fontSize: 27,
-    marginRight: 14,
+
+  actionNumber: {
+    color: '#53645E',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1,
+    width: 38,
   },
+
   actionText: {
     flex: 1,
   },
+
   actionTitle: {
-    color: '#FFFFFF',
-    fontSize: 16,
+    color: '#EDF1EF',
+    fontSize: 15,
     fontWeight: '700',
   },
+
   actionDescription: {
-    color: '#9AA9A5',
-    fontSize: 13,
-    lineHeight: 19,
+    color: '#71817C',
+    fontSize: 12,
     marginTop: 3,
   },
+
+  actionArrow: {
+    color: '#596A64',
+    fontSize: 25,
+    fontWeight: '300',
+    marginLeft: 16,
+  },
+
   nextRideCard: {
-    backgroundColor: '#194D3D',
-    borderRadius: 18,
-    padding: 20,
+    backgroundColor: '#12241E',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#244438',
+    padding: 22,
   },
-  nextRideType: {
-    color: '#FFFFFF',
-    fontSize: 22,
+
+  nextRideEyebrow: {
+    color: '#55DFA0',
+    fontSize: 10,
     fontWeight: '800',
+    letterSpacing: 1.3,
   },
+
+  nextRideType: {
+    color: '#F4F7F5',
+    fontSize: 24,
+    fontWeight: '800',
+    marginTop: 10,
+  },
+
   nextRideDetails: {
-    color: '#6EF0AE',
+    color: '#55DFA0',
     fontSize: 14,
     fontWeight: '700',
-    marginTop: 5,
+    marginTop: 6,
   },
+
   nextRideReason: {
-    color: '#D2E5DE',
-    fontSize: 14,
-    lineHeight: 21,
-    marginTop: 12,
+    color: '#A0AFA9',
+    fontSize: 13,
+    lineHeight: 20,
+    marginTop: 14,
+    maxWidth: 650,
   },
+
   disclaimer: {
-    color: '#61736D',
-    fontSize: 11,
-    lineHeight: 16,
+    color: '#53615D',
+    fontSize: 10,
+    lineHeight: 15,
     textAlign: 'center',
-    marginTop: 22,
+    marginTop: 26,
   },
 });

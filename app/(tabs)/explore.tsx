@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StatusBar } from 'expo-status-bar';
+import { useEffect, useState } from 'react';
 import {
   Pressable,
   ScrollView,
@@ -72,84 +72,133 @@ export default function SleepScreen() {
   }
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.screen}
+      contentContainerStyle={styles.content}
+    >
       <StatusBar style="light" />
 
       <Text style={styles.logo}>RIDERESET</Text>
-      <Text style={styles.heading}>Sleep Log</Text>
+
+      <Text style={styles.heading}>Sleep</Text>
+
       <Text style={styles.subtitle}>
-        Record last night’s sleep to improve your next-ride recommendation.
+        Log last night’s sleep for today’s recovery estimate.
       </Text>
 
-      <View style={styles.card}>
-        <Text style={styles.cardLabel}>SLEEP DURATION</Text>
+      <Text style={styles.sectionLabel}>DURATION</Text>
 
-        <View style={styles.durationRow}>
-          <Pressable
-            style={styles.controlButton}
-            onPress={() => changeHours(-0.5)}
-          >
-            <Text style={styles.controlText}>−</Text>
-          </Pressable>
+      <View style={styles.durationCard}>
+        <Pressable
+          style={styles.controlButton}
+          onPress={() => changeHours(-0.5)}
+        >
+          <Text style={styles.controlText}>−</Text>
+        </Pressable>
 
-          <View style={styles.durationCenter}>
-            <Text style={styles.hours}>{hours}</Text>
-            <Text style={styles.hoursLabel}>hours</Text>
-          </View>
-
-          <Pressable
-            style={styles.controlButton}
-            onPress={() => changeHours(0.5)}
-          >
-            <Text style={styles.controlText}>+</Text>
-          </Pressable>
+        <View style={styles.durationCenter}>
+          <Text style={styles.hours}>{hours}</Text>
+          <Text style={styles.hoursLabel}>hours</Text>
         </View>
+
+        <Pressable
+          style={styles.controlButton}
+          onPress={() => changeHours(0.5)}
+        >
+          <Text style={styles.controlText}>+</Text>
+        </Pressable>
       </View>
 
-      <Text style={styles.sectionTitle}>How did you sleep?</Text>
+      <View style={styles.durationScale}>
+        <Text style={styles.scaleText}>Less</Text>
+        <Text style={styles.scaleText}>Recommended 7–9 hr</Text>
+        <Text style={styles.scaleText}>More</Text>
+      </View>
 
-      <View style={styles.qualityGrid}>
-        {qualities.map((option) => (
+      <Text style={styles.sectionLabel}>SLEEP QUALITY</Text>
+
+      <View style={styles.qualityCard}>
+        {qualities.map((option, index) => (
           <Pressable
             key={option}
             style={[
-              styles.qualityButton,
-              quality === option && styles.qualityButtonSelected,
+              styles.qualityRow,
+              index < qualities.length - 1 && styles.qualityRowBorder,
             ]}
             onPress={() => {
               setQuality(option);
               setSaved(false);
             }}
           >
-            <Text
+            <View>
+              <Text
+                style={[
+                  styles.qualityText,
+                  quality === option && styles.qualityTextSelected,
+                ]}
+              >
+                {option}
+              </Text>
+
+              <Text style={styles.qualityDescription}>
+                {option === 'Poor' && 'Restless or significantly disrupted'}
+                {option === 'Fair' && 'Below your normal sleep quality'}
+                {option === 'Good' && 'Mostly restful and uninterrupted'}
+                {option === 'Great' && 'Deep, restful and refreshing'}
+              </Text>
+            </View>
+
+            <View
               style={[
-                styles.qualityText,
-                quality === option && styles.qualityTextSelected,
+                styles.radioOuter,
+                quality === option && styles.radioOuterSelected,
               ]}
             >
-              {option}
-            </Text>
+              {quality === option && <View style={styles.radioInner} />}
+            </View>
           </Pressable>
         ))}
       </View>
 
-      <Pressable style={styles.saveButton} onPress={saveSleep}>
-        <Text style={styles.saveButtonText}>Save Sleep</Text>
+      <Pressable
+        style={[
+          styles.saveButton,
+          saved && styles.saveButtonSaved,
+        ]}
+        onPress={saveSleep}
+      >
+        <Text
+          style={[
+            styles.saveButtonText,
+            saved && styles.saveButtonTextSaved,
+          ]}
+        >
+          {saved ? 'Saved' : 'Save sleep'}
+        </Text>
       </Pressable>
 
       {saved && (
-        <View style={styles.savedCard}>
-          <Text style={styles.savedTitle}>Sleep saved on this device</Text>
+        <View style={styles.savedRow}>
+          <View style={styles.savedDot} />
 
-          <Text style={styles.savedText}>
-            {hours} hours · {quality} quality
-          </Text>
+          <View style={styles.savedContent}>
+            <Text style={styles.savedTitle}>
+              Last night
+            </Text>
 
-          <Text style={styles.savedNote}>
-            RideReset will use this entry when estimating your recovery.
-          </Text>
+            <Text style={styles.savedText}>
+              {hours} hr · {quality}
+            </Text>
+          </View>
+
+          <Text style={styles.savedMeta}>ON DEVICE</Text>
         </View>
       )}
+
+      <Text style={styles.note}>
+        Sleep entries are stored locally on this device and used by
+        RideReset when calculating recovery.
+      </Text>
     </ScrollView>
   );
 }
@@ -157,142 +206,239 @@ export default function SleepScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#071512',
+    backgroundColor: '#09110F',
   },
+
   content: {
-    paddingTop: 70,
-    paddingHorizontal: 20,
-    paddingBottom: 50,
+    paddingTop: 64,
+    paddingHorizontal: 24,
+    paddingBottom: 60,
+    width: '100%',
+    maxWidth: 1100,
+    alignSelf: 'center',
   },
+
   logo: {
-    color: '#4BE39A',
-    fontSize: 15,
+    color: '#55DFA0',
+    fontSize: 13,
     fontWeight: '800',
-    letterSpacing: 2,
+    letterSpacing: 2.4,
   },
+
   heading: {
-    color: '#FFFFFF',
-    fontSize: 30,
+    color: '#F5F7F6',
+    fontSize: 34,
     fontWeight: '800',
-    marginTop: 12,
+    marginTop: 28,
   },
+
   subtitle: {
-    color: '#92A6A0',
-    fontSize: 16,
-    lineHeight: 23,
+    color: '#84918D',
+    fontSize: 15,
+    lineHeight: 22,
     marginTop: 6,
-    marginBottom: 26,
+    marginBottom: 34,
   },
-  card: {
-    backgroundColor: '#102A24',
-    borderRadius: 22,
-    padding: 22,
+
+  sectionLabel: {
+    color: '#6E817A',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1.4,
+    marginBottom: 10,
   },
-  cardLabel: {
-    color: '#80A098',
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 1,
-  },
-  durationRow: {
+
+  durationCard: {
+    backgroundColor: '#101A17',
+    borderWidth: 1,
+    borderColor: '#1C2B26',
+    borderRadius: 12,
+    padding: 18,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 22,
   },
+
   controlButton: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#194D3D',
+    width: 52,
+    height: 52,
+    borderRadius: 10,
+    backgroundColor: '#17231F',
+    borderWidth: 1,
+    borderColor: '#283833',
     alignItems: 'center',
     justifyContent: 'center',
   },
+
   controlText: {
-    color: '#FFFFFF',
-    fontSize: 30,
+    color: '#DDE5E2',
+    fontSize: 25,
     fontWeight: '500',
+    lineHeight: 28,
   },
+
   durationCenter: {
     alignItems: 'center',
   },
+
   hours: {
-    color: '#FFFFFF',
-    fontSize: 50,
+    color: '#F7F9F8',
+    fontSize: 48,
     fontWeight: '800',
+    letterSpacing: -1.5,
   },
+
   hoursLabel: {
-    color: '#92A6A0',
-    fontSize: 14,
+    color: '#70817B',
+    fontSize: 12,
+    marginTop: 1,
   },
-  sectionTitle: {
-    color: '#FFFFFF',
-    fontSize: 20,
-    fontWeight: '700',
-    marginTop: 28,
-    marginBottom: 14,
-  },
-  qualityGrid: {
+
+  durationScale: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
+    justifyContent: 'space-between',
+    marginTop: 9,
+    marginBottom: 34,
   },
-  qualityButton: {
-    width: '48%',
-    backgroundColor: '#10201C',
+
+  scaleText: {
+    color: '#53635E',
+    fontSize: 10,
+  },
+
+  qualityCard: {
+    backgroundColor: '#101815',
     borderWidth: 1,
-    borderColor: '#1D3931',
-    borderRadius: 14,
+    borderColor: '#1B2924',
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+
+  qualityRow: {
+    minHeight: 72,
+    paddingVertical: 14,
+    paddingHorizontal: 17,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+
+  qualityRowBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#1C2925',
+  },
+
+  qualityText: {
+    color: '#98A6A1',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+
+  qualityTextSelected: {
+    color: '#F2F5F4',
+  },
+
+  qualityDescription: {
+    color: '#61716C',
+    fontSize: 11,
+    marginTop: 4,
+  },
+
+  radioOuter: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: '#43534E',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 16,
+  },
+
+  radioOuterSelected: {
+    borderColor: '#55DFA0',
+  },
+
+  radioInner: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#55DFA0',
+  },
+
+  saveButton: {
+    backgroundColor: '#55DFA0',
+    borderRadius: 10,
     paddingVertical: 16,
     alignItems: 'center',
+    marginTop: 24,
   },
-  qualityButtonSelected: {
-    backgroundColor: '#194D3D',
-    borderColor: '#4BE39A',
+
+  saveButtonSaved: {
+    backgroundColor: '#14251F',
+    borderWidth: 1,
+    borderColor: '#28513F',
   },
-  qualityText: {
-    color: '#92A6A0',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  qualityTextSelected: {
-    color: '#FFFFFF',
-  },
-  saveButton: {
-    backgroundColor: '#4BE39A',
-    borderRadius: 16,
-    paddingVertical: 17,
-    alignItems: 'center',
-    marginTop: 28,
-  },
+
   saveButtonText: {
-    color: '#071512',
-    fontSize: 16,
+    color: '#09110F',
+    fontSize: 15,
     fontWeight: '800',
   },
-  savedCard: {
-    backgroundColor: '#10201C',
-    borderRadius: 16,
-    padding: 18,
-    marginTop: 18,
-    borderLeftWidth: 4,
-    borderLeftColor: '#4BE39A',
+
+  saveButtonTextSaved: {
+    color: '#55DFA0',
   },
+
+  savedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#101815',
+    borderWidth: 1,
+    borderColor: '#1B2924',
+    borderRadius: 10,
+    padding: 16,
+    marginTop: 14,
+  },
+
+  savedDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: '#55DFA0',
+    marginRight: 12,
+  },
+
+  savedContent: {
+    flex: 1,
+  },
+
   savedTitle: {
-    color: '#FFFFFF',
-    fontSize: 17,
+    color: '#71827C',
+    fontSize: 10,
     fontWeight: '700',
+    letterSpacing: 1,
   },
+
   savedText: {
-    color: '#4BE39A',
-    fontSize: 15,
-    fontWeight: '600',
-    marginTop: 5,
+    color: '#E8EDEB',
+    fontSize: 14,
+    fontWeight: '700',
+    marginTop: 3,
   },
-  savedNote: {
-    color: '#92A6A0',
-    fontSize: 13,
-    lineHeight: 19,
-    marginTop: 8,
+
+  savedMeta: {
+    color: '#52615C',
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
+
+  note: {
+    color: '#52615C',
+    fontSize: 10,
+    lineHeight: 16,
+    textAlign: 'center',
+    marginTop: 22,
   },
 });

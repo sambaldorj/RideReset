@@ -1,4 +1,5 @@
 import Constants from 'expo-constants';
+import { Platform } from 'react-native';
 
 export type IntervalsActivity = {
   id: string;
@@ -36,6 +37,10 @@ type LatestRideResponse = {
 };
 
 function getServerAddress() {
+  if (Platform.OS === 'web') {
+    return `http://${window.location.hostname}:3000`;
+  }
+
   const hostUri = Constants.expoConfig?.hostUri;
 
   if (!hostUri) {
