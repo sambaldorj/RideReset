@@ -36,6 +36,18 @@ type LatestRideResponse = {
   ride: BackendRide | null;
 };
 
+export type TrainingSummary = {
+  days: number;
+  rideCount: number;
+  totalLoad: number;
+  distanceMiles: number;
+  movingMinutes: number;
+};
+
+type TrainingSummaryResponse = {
+  summary: TrainingSummary;
+};
+
 function getServerAddress() {
   if (Platform.OS === 'web') {
     return `http://${window.location.hostname}:3000`;
@@ -102,4 +114,20 @@ export async function getLatestRide(): Promise<IntervalsActivity | null> {
 
     icu_training_load: ride.trainingLoad ?? undefined,
   };
+}
+
+export async function getTrainingSummary(): Promise<TrainingSummary> {
+  const response = await fetch(
+    `${getServerAddress()}/api/training-summary`
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      `Training summary request failed: ${response.status}`
+    );
+  }
+
+  const data: TrainingSummaryResponse = await response.json();
+
+  return data.summary;
 }

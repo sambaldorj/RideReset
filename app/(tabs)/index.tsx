@@ -7,7 +7,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
   getLatestRide,
+  getTrainingSummary,
   type IntervalsActivity,
+  type TrainingSummary,
 } from '../../services/intervals';
 
 type SleepQuality = 'Poor' | 'Fair' | 'Good' | 'Great';
@@ -158,6 +160,17 @@ function formatDuration(seconds?: number) {
   return `${hours}h ${minutes}m`;
 }
 
+function formatTrainingTime(minutes: number) {
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+
+  if (hours === 0) {
+    return `${remainingMinutes}m`;
+  }
+
+  return `${hours}h ${remainingMinutes}m`;
+}
+
 function formatRideDate(date?: string) {
   if (!date) {
     return 'Date unavailable';
@@ -175,13 +188,16 @@ export default function HomeScreen() {
   const [ride, setRide] = useState<IntervalsActivity | null>(null);
   const [rideLoading, setRideLoading] = useState(true);
   const [rideError, setRideError] = useState(false);
+  const [trainingSummary, setTrainingSummary] =
+  useState<TrainingSummary | null>(null);
 
   useFocusEffect(
-    useCallback(() => {
-      void loadSleep();
-      void loadRide();
-    }, [])
-  );
+  useCallback(() => {
+    void loadSleep();
+    void loadRide();
+    void loadTrainingSummary();
+  }, [])
+);
 
   async function loadSleep() {
     try {
@@ -209,6 +225,15 @@ export default function HomeScreen() {
       setRideLoading(false);
     }
   }
+
+  async function loadTrainingSummary() {
+  try {
+    const summary = await getTrainingSummary();
+    setTrainingSummary(summary);
+  } catch (error) {
+    console.error('Could not load training summary:', error);
+  }
+}
 
   const recovery = calculateRecovery(sleep, ride);
 
@@ -365,8 +390,53 @@ export default function HomeScreen() {
         <Text style={styles.rideMessage}>
           No cycling activity was found.
         </Text>
-      )}
+            )}
     </View>
+
+    {trainingSummary && (
+      <>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Recent training</Text>
+          <Text style={styles.periodLabel}>LAST 7 DAYS</Text>
+        </View>
+
+        <View style={styles.trainingCard}>
+          <View style={styles.trainingRow}>
+            <View style={styles.trainingMetric}>
+              <Text style={styles.trainingValue}>
+                {trainingSummary.rideCount}
+              </Text>
+              <Text style={styles.trainingLabel}>RIDES</Text>
+            </View>
+
+            <View style={styles.trainingMetricBorder}>
+              <Text style={styles.trainingValue}>
+                {trainingSummary.distanceMiles}
+              </Text>
+              <Text style={styles.trainingLabel}>MILES</Text>
+            </View>
+          </View>
+
+          <View style={styles.trainingDivider} />
+
+          <View style={styles.trainingRow}>
+            <View style={styles.trainingMetric}>
+              <Text style={styles.trainingValue}>
+                {formatTrainingTime(trainingSummary.movingMinutes)}
+              </Text>
+              <Text style={styles.trainingLabel}>MOVING TIME</Text>
+            </View>
+
+            <View style={styles.trainingMetricBorder}>
+              <Text style={styles.trainingValue}>
+                {trainingSummary.totalLoad}
+              </Text>
+              <Text style={styles.trainingLabel}>TRAINING LOAD</Text>
+            </View>
+          </View>
+        </View>
+      </>
+    )}
 
     <Text style={styles.sectionTitle}>Today</Text>
 
@@ -450,7 +520,7 @@ const styles = StyleSheet.create({
   },
 
   content: {
-    paddingTop: 28,
+    paddingTop: 28  ,
     paddingHorizontal: 24,
     paddingBottom: 60,
     width: '100%',
@@ -670,6 +740,59 @@ const styles = StyleSheet.create({
     color: '#758780',
     fontSize: 12,
   },
+
+  periodLabel: {
+  color: '#65766F',
+  fontSize: 10,
+  fontWeight: '700',
+  letterSpacing: 1,
+  marginTop: 34,
+},
+
+trainingCard: {
+  backgroundColor: '#101815',
+  borderRadius: 12,
+  borderWidth: 1,
+  borderColor: '#1B2924',
+  overflow: 'hidden',
+},
+
+trainingRow: {
+  flexDirection: 'row',
+},
+
+trainingMetric: {
+  flex: 1,
+  paddingVertical: 18,
+  paddingHorizontal: 18,
+},
+
+trainingMetricBorder: {
+  flex: 1,
+  paddingVertical: 18,
+  paddingHorizontal: 18,
+  borderLeftWidth: 1,
+  borderLeftColor: '#22302B',
+},
+
+trainingDivider: {
+  height: 1,
+  backgroundColor: '#22302B',
+},
+
+trainingValue: {
+  color: '#F3F6F4',
+  fontSize: 21,
+  fontWeight: '700',
+},
+
+trainingLabel: {
+  color: '#687A74',
+  fontSize: 9,
+  fontWeight: '700',
+  letterSpacing: 1,
+  marginTop: 5,
+},
 
   rideMessage: {
     color: '#9AA9A4',

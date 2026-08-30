@@ -21,9 +21,9 @@ const sendJson = (response, statusCode, data) => {
   response.end(JSON.stringify(data));
 };
 
-const getLatestRide = async () => {
+const fetchCyclingActivities = async (days = 60) => {
   const oldest = new Date();
-  oldest.setDate(oldest.getDate() - 60);
+  oldest.setDate(oldest.getDate() - days);
 
   const newest = new Date();
   newest.setDate(newest.getDate() + 1);
@@ -53,7 +53,7 @@ const getLatestRide = async () => {
 
   const activities = await response.json();
 
-  const rides = activities
+  return activities
     .filter((activity) =>
       ["Ride", "VirtualRide", "GravelRide"].includes(activity.type)
     )
@@ -62,31 +62,71 @@ const getLatestRide = async () => {
         new Date(b.start_date_local).getTime() -
         new Date(a.start_date_local).getTime()
     );
+};
+
+const formatRide = (ride) => ({
+  id: ride.id,
+  name: ride.name ?? ride.type,
+  type: ride.type,
+  startDate: ride.start_date_local,
+  distanceMiles: ride.distance
+    ? Number((ride.distance / 1609.344).toFixed(1))
+    : null,
+  movingMinutes: ride.moving_time
+    ? Math.round(ride.moving_time / 60)
+    : null,
+  averageWatts:
+    ride.average_watts ?? ride.icu_average_watts ?? null,
+  averageHeartRate: ride.average_heartrate ?? null,
+  elevationGainFeet: ride.total_elevation_gain
+    ? Math.round(ride.total_elevation_gain * 3.28084)
+    : null,
+  trainingLoad: ride.icu_training_load ?? null,
+});
+
+const getLatestRide = async () => {
+  const rides = await fetchCyclingActivities(60);
 
   if (rides.length === 0) {
     return null;
   }
 
-  const ride = rides[0];
+  return formatRide(rides[0]);
+};
+
+const getTrainingSummary = async () => {
+  const rides = await fetchCyclingActivities(8);
+  const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+
+  const recentRides = rides.filter((ride) => {
+    const rideTime = new Date(ride.start_date_local).getTime();
+
+    return !Number.isNaN(rideTime) && rideTime >= sevenDaysAgo;
+  });
+
+  const totalLoad = recentRides.reduce(
+    (sum, ride) => sum + (ride.icu_training_load ?? 0),
+    0
+  );
+
+  const totalDistanceMeters = recentRides.reduce(
+    (sum, ride) => sum + (ride.distance ?? 0),
+    0
+  );
+
+  const totalMovingSeconds = recentRides.reduce(
+    (sum, ride) => sum + (ride.moving_time ?? 0),
+    0
+  );
 
   return {
-    id: ride.id,
-    name: ride.name ?? ride.type,
-    type: ride.type,
-    startDate: ride.start_date_local,
-    distanceMiles: ride.distance
-      ? Number((ride.distance / 1609.344).toFixed(1))
-      : null,
-    movingMinutes: ride.moving_time
-      ? Math.round(ride.moving_time / 60)
-      : null,
-    averageWatts:
-      ride.average_watts ?? ride.icu_average_watts ?? null,
-    averageHeartRate: ride.average_heartrate ?? null,
-    elevationGainFeet: ride.total_elevation_gain
-      ? Math.round(ride.total_elevation_gain * 3.28084)
-      : null,
-    trainingLoad: ride.icu_training_load ?? null,
+    days: 7,
+    rideCount: recentRides.length,
+    totalLoad: Math.round(totalLoad),
+    distanceMiles: Number(
+      (totalDistanceMeters / 1609.344).toFixed(1)
+    ),
+    movingMinutes: Math.round(totalMovingSeconds / 60),
   };
 };
 
@@ -100,20 +140,31 @@ const server = http.createServer(async (request, response) => {
     return;
   }
 
-  if (request.method !== "GET" || request.url !== "/api/latest-ride") {
-    sendJson(response, 404, { error: "Not found" });
+  if (request.method !== "GET") {
+  sendJson(response, 405, { error: "Method not allowed" });
+  return;
+}
+
+try {
+  if (request.url === "/api/latest-ride") {
+    const ride = await getLatestRide();
+    sendJson(response, 200, { ride });
     return;
   }
 
-  try {
-    const ride = await getLatestRide();
-    sendJson(response, 200, { ride });
-  } catch (error) {
-    console.error(error.message);
-    sendJson(response, 500, {
-      error: "Unable to retrieve the latest ride",
-    });
+  if (request.url === "/api/training-summary") {
+    const summary = await getTrainingSummary();
+    sendJson(response, 200, { summary });
+    return;
   }
+
+  sendJson(response, 404, { error: "Not found" });
+} catch (error) {
+  console.error(error.message);
+  sendJson(response, 500, {
+    error: "Unable to retrieve Intervals.icu data",
+  });
+}
 });
 
 server.listen(port, "0.0.0.0", () => {
