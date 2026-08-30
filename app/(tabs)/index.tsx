@@ -24,7 +24,8 @@ const STORAGE_KEY = 'ridereset.latestSleep';
 
 function calculateRecovery(
   sleep: SleepEntry | null,
-  ride: IntervalsActivity | null
+  ride: IntervalsActivity | null,
+  trainingSummary: TrainingSummary | null
 ) {
   if (!sleep) {
     return {
@@ -60,7 +61,21 @@ function calculateRecovery(
     40 + durationPoints + qualityPoints[sleep.quality]
   );
 
-  if (ride) {
+  let loadPenalty = 0;
+
+  if (trainingSummary) {
+    const weeklyLoad = trainingSummary.totalLoad;
+
+    if (weeklyLoad >= 350) {
+      loadPenalty = 18;
+    } else if (weeklyLoad >= 250) {
+      loadPenalty = 12;
+    } else if (weeklyLoad >= 150) {
+      loadPenalty = 6;
+    } else if (weeklyLoad >= 75) {
+      loadPenalty = 3;
+    }
+  } else if (ride) {
     const rideTime = new Date(ride.start_date_local).getTime();
     const hoursSinceRide = (Date.now() - rideTime) / 3_600_000;
 
@@ -70,7 +85,6 @@ function calculateRecovery(
       hoursSinceRide <= 72
     ) {
       const load = ride.icu_training_load ?? 0;
-      let loadPenalty = 0;
 
       if (load >= 120) {
         loadPenalty = 20;
@@ -80,15 +94,11 @@ function calculateRecovery(
         loadPenalty = 8;
       } else if (load > 0) {
         loadPenalty = 4;
-      } else if ((ride.moving_time ?? 0) >= 7200) {
-        loadPenalty = 8;
-      } else if ((ride.moving_time ?? 0) >= 3600) {
-        loadPenalty = 4;
       }
-
-      score = Math.max(0, score - loadPenalty);
     }
   }
+
+  score = Math.max(0, score - loadPenalty);
 
   if (score >= 85) {
     return {
@@ -189,15 +199,15 @@ export default function HomeScreen() {
   const [rideLoading, setRideLoading] = useState(true);
   const [rideError, setRideError] = useState(false);
   const [trainingSummary, setTrainingSummary] =
-  useState<TrainingSummary | null>(null);
+    useState<TrainingSummary | null>(null);
 
   useFocusEffect(
-  useCallback(() => {
-    void loadSleep();
-    void loadRide();
-    void loadTrainingSummary();
-  }, [])
-);
+    useCallback(() => {
+      void loadSleep();
+      void loadRide();
+      void loadTrainingSummary();
+    }, [])
+  );
 
   async function loadSleep() {
     try {
@@ -227,15 +237,19 @@ export default function HomeScreen() {
   }
 
   async function loadTrainingSummary() {
-  try {
-    const summary = await getTrainingSummary();
-    setTrainingSummary(summary);
-  } catch (error) {
-    console.error('Could not load training summary:', error);
+    try {
+      const summary = await getTrainingSummary();
+      setTrainingSummary(summary);
+    } catch (error) {
+      console.error('Could not load training summary:', error);
+    }
   }
-}
 
-  const recovery = calculateRecovery(sleep, ride);
+  const recovery = calculateRecovery(
+    sleep,
+    ride,
+    trainingSummary
+  );
 
   const averagePower =
     ride?.average_watts ??
@@ -247,272 +261,274 @@ export default function HomeScreen() {
     ride?.average_heartrate ?? ride?.icu_average_hr;
 
   const todayLabel = new Date().toLocaleDateString('en-US', {
-  weekday: 'short',
-  month: 'short',
-  day: 'numeric',
-});
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  });
 
   return (
-  <SafeAreaView style={styles.safeArea} edges={['top']}>
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-    <StatusBar style="light" />
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+        <StatusBar style="light" />
 
-    <View style={styles.headerRow}>
-      <Text style={styles.logo}>RIDERESET</Text>
-      <Text style={styles.date}>{todayLabel}</Text>
-    </View>
+        <View style={styles.headerRow}>
+          <Text style={styles.logo}>RIDERESET</Text>
+          <Text style={styles.date}>{todayLabel}</Text>
+        </View>
 
-    <Text style={styles.heading}>Recovery</Text>
-    <Text style={styles.subtitle}>
-      Sleep and training readiness at a glance.
-    </Text>
+        <Text style={styles.heading}>Recovery</Text>
+        <Text style={styles.subtitle}>
+          Sleep and training readiness at a glance.
+        </Text>
 
-    <View style={styles.recoveryPanel}>
-      <View style={styles.recoveryTopRow}>
-        <View style={styles.scoreGroup}>
-          <Text style={styles.score}>{recovery.score}</Text>
+        <View style={styles.recoveryPanel}>
+          <View style={styles.recoveryTopRow}>
+            <View style={styles.scoreGroup}>
+              <Text style={styles.score}>{recovery.score}</Text>
 
-          <View style={styles.scoreMeta}>
-            <Text style={styles.cardLabel}>RECOVERY SCORE</Text>
-            <Text
+              <View style={styles.scoreMeta}>
+                <Text style={styles.cardLabel}>RECOVERY SCORE</Text>
+                <Text
+                  style={[
+                    styles.recoveryStatus,
+                    { color: recovery.color },
+                  ]}
+                >
+                  {recovery.status}
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.progressTrack}>
+            <View
               style={[
-                styles.recoveryStatus,
-                { color: recovery.color },
+                styles.progressFill,
+                {
+                  width: `${recovery.score}%`,
+                  backgroundColor: recovery.color,
+                },
               ]}
-            >
-              {recovery.status}
-            </Text>
-          </View>
-        </View>
-      </View>
-
-      <View style={styles.progressTrack}>
-        <View
-          style={[
-            styles.progressFill,
-            {
-              width: `${recovery.score}%`,
-              backgroundColor: recovery.color,
-            },
-          ]}
-        />
-      </View>
-
-      <View style={styles.metricRow}>
-        <View style={styles.metric}>
-          <Text style={styles.metricLabel}>SLEEP</Text>
-          <Text style={styles.metricValue}>
-            {sleep ? `${sleep.hours} hr` : 'Not logged'}
-          </Text>
-          <Text style={styles.metricSubvalue}>
-            {sleep ? sleep.quality : 'Add last night’s sleep'}
-          </Text>
-        </View>
-
-        <View style={styles.metricDivider} />
-
-        <View style={styles.metric}>
-          <Text style={styles.metricLabel}>RECENT LOAD</Text>
-          <Text style={styles.metricValue}>
-            {ride?.icu_training_load
-              ? Math.round(ride.icu_training_load)
-              : '—'}
-          </Text>
-          <Text style={styles.metricSubvalue}>
-            {ride ? 'Intervals.icu' : 'No recent activity'}
-          </Text>
-        </View>
-      </View>
-    </View>
-
-    <View style={styles.sectionHeader}>
-      <Text style={styles.sectionTitle}>Latest activity</Text>
-      <Text style={styles.sourcePill}>INTERVALS.ICU</Text>
-    </View>
-
-    <View style={styles.card}>
-      {rideLoading ? (
-        <Text style={styles.rideMessage}>
-          Loading your latest ride...
-        </Text>
-      ) : rideError ? (
-        <Text style={styles.errorMessage}>
-          RideReset could not load your Intervals.icu activity.
-        </Text>
-      ) : ride ? (
-        <>
-          <Text style={styles.rideTitle}>
-            {ride.name || 'Cycling activity'}
-          </Text>
-
-          <Text style={styles.rideDate}>
-            {formatRideDate(ride.start_date_local)}
-          </Text>
-
-          <View style={styles.statsRow}>
-            <View style={styles.statCell}>
-              <Text style={styles.statValue}>
-                {formatDistance(ride.distance)}
-              </Text>
-              <Text style={styles.statLabel}>MILES</Text>
-            </View>
-
-            <View style={[styles.statCell, styles.statCellBorder]}>
-              <Text style={styles.statValue}>
-                {formatDuration(ride.moving_time)}
-              </Text>
-              <Text style={styles.statLabel}>MOVING</Text>
-            </View>
-
-            <View style={[styles.statCell, styles.statCellBorder]}>
-              <Text style={styles.statValue}>
-                {averagePower ? `${Math.round(averagePower)} W` : '—'}
-              </Text>
-              <Text style={styles.statLabel}>AVG POWER</Text>
-            </View>
+            />
           </View>
 
-          <View style={styles.rideMetaRow}>
-            <Text style={styles.rideMeta}>
-              {averageHeartRate
-                ? `${Math.round(averageHeartRate)} bpm avg`
-                : 'Heart rate unavailable'}
-            </Text>
+          <View style={styles.metricRow}>
+            <View style={styles.metric}>
+              <Text style={styles.metricLabel}>SLEEP</Text>
+              <Text style={styles.metricValue}>
+                {sleep ? `${sleep.hours} hr` : 'Not logged'}
+              </Text>
+              <Text style={styles.metricSubvalue}>
+                {sleep ? sleep.quality : 'Add last night’s sleep'}
+              </Text>
+            </View>
 
-            <Text style={styles.rideMeta}>
-              {ride.icu_training_load
-                ? `Load ${Math.round(ride.icu_training_load)}`
-                : ''}
-            </Text>
+            <View style={styles.metricDivider} />
+
+            <View style={styles.metric}>
+              <Text style={styles.metricLabel}>7-DAY LOAD</Text>
+              <Text style={styles.metricValue}>
+                {trainingSummary
+                  ? trainingSummary.totalLoad
+                  : '—'}
+              </Text>
+              <Text style={styles.metricSubvalue}>
+                {trainingSummary
+                  ? `${trainingSummary.rideCount} rides`
+                  : 'No training data'}
+              </Text>
+            </View>
           </View>
-        </>
-      ) : (
-        <Text style={styles.rideMessage}>
-          No cycling activity was found.
-        </Text>
-            )}
-    </View>
+        </View>
 
-    {trainingSummary && (
-      <>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Recent training</Text>
-          <Text style={styles.periodLabel}>LAST 7 DAYS</Text>
+          <Text style={styles.sectionTitle}>Latest activity</Text>
+          <Text style={styles.sourcePill}>INTERVALS.ICU</Text>
         </View>
 
-        <View style={styles.trainingCard}>
-          <View style={styles.trainingRow}>
-            <View style={styles.trainingMetric}>
-              <Text style={styles.trainingValue}>
-                {trainingSummary.rideCount}
+        <View style={styles.card}>
+          {rideLoading ? (
+            <Text style={styles.rideMessage}>
+              Loading your latest ride...
+            </Text>
+          ) : rideError ? (
+            <Text style={styles.errorMessage}>
+              RideReset could not load your Intervals.icu activity.
+            </Text>
+          ) : ride ? (
+            <>
+              <Text style={styles.rideTitle}>
+                {ride.name || 'Cycling activity'}
               </Text>
-              <Text style={styles.trainingLabel}>RIDES</Text>
+
+              <Text style={styles.rideDate}>
+                {formatRideDate(ride.start_date_local)}
+              </Text>
+
+              <View style={styles.statsRow}>
+                <View style={styles.statCell}>
+                  <Text style={styles.statValue}>
+                    {formatDistance(ride.distance)}
+                  </Text>
+                  <Text style={styles.statLabel}>MILES</Text>
+                </View>
+
+                <View style={[styles.statCell, styles.statCellBorder]}>
+                  <Text style={styles.statValue}>
+                    {formatDuration(ride.moving_time)}
+                  </Text>
+                  <Text style={styles.statLabel}>MOVING</Text>
+                </View>
+
+                <View style={[styles.statCell, styles.statCellBorder]}>
+                  <Text style={styles.statValue}>
+                    {averagePower ? `${Math.round(averagePower)} W` : '—'}
+                  </Text>
+                  <Text style={styles.statLabel}>AVG POWER</Text>
+                </View>
+              </View>
+
+              <View style={styles.rideMetaRow}>
+                <Text style={styles.rideMeta}>
+                  {averageHeartRate
+                    ? `${Math.round(averageHeartRate)} bpm avg`
+                    : 'Heart rate unavailable'}
+                </Text>
+
+                <Text style={styles.rideMeta}>
+                  {ride.icu_training_load
+                    ? `Load ${Math.round(ride.icu_training_load)}`
+                    : ''}
+                </Text>
+              </View>
+            </>
+          ) : (
+            <Text style={styles.rideMessage}>
+              No cycling activity was found.
+            </Text>
+          )}
+        </View>
+
+        {trainingSummary && (
+          <>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Recent training</Text>
+              <Text style={styles.periodLabel}>LAST 7 DAYS</Text>
             </View>
 
-            <View style={styles.trainingMetricBorder}>
-              <Text style={styles.trainingValue}>
-                {trainingSummary.distanceMiles}
-              </Text>
-              <Text style={styles.trainingLabel}>MILES</Text>
+            <View style={styles.trainingCard}>
+              <View style={styles.trainingRow}>
+                <View style={styles.trainingMetric}>
+                  <Text style={styles.trainingValue}>
+                    {trainingSummary.rideCount}
+                  </Text>
+                  <Text style={styles.trainingLabel}>RIDES</Text>
+                </View>
+
+                <View style={styles.trainingMetricBorder}>
+                  <Text style={styles.trainingValue}>
+                    {trainingSummary.distanceMiles}
+                  </Text>
+                  <Text style={styles.trainingLabel}>MILES</Text>
+                </View>
+              </View>
+
+              <View style={styles.trainingDivider} />
+
+              <View style={styles.trainingRow}>
+                <View style={styles.trainingMetric}>
+                  <Text style={styles.trainingValue}>
+                    {formatTrainingTime(trainingSummary.movingMinutes)}
+                  </Text>
+                  <Text style={styles.trainingLabel}>MOVING TIME</Text>
+                </View>
+
+                <View style={styles.trainingMetricBorder}>
+                  <Text style={styles.trainingValue}>
+                    {trainingSummary.totalLoad}
+                  </Text>
+                  <Text style={styles.trainingLabel}>TRAINING LOAD</Text>
+                </View>
+              </View>
             </View>
+          </>
+        )}
+
+        <Text style={styles.sectionTitle}>Today</Text>
+
+        <View style={styles.actionList}>
+          <View style={styles.actionRow}>
+            <Text style={styles.actionNumber}>01</Text>
+
+            <View style={styles.actionText}>
+              <Text style={styles.actionTitle}>Hydration</Text>
+              <Text style={styles.actionDescription}>
+                Replace fluids throughout the day.
+              </Text>
+            </View>
+
+            <Text style={styles.actionArrow}>›</Text>
           </View>
 
-          <View style={styles.trainingDivider} />
+          <View style={styles.actionRow}>
+            <Text style={styles.actionNumber}>02</Text>
 
-          <View style={styles.trainingRow}>
-            <View style={styles.trainingMetric}>
-              <Text style={styles.trainingValue}>
-                {formatTrainingTime(trainingSummary.movingMinutes)}
+            <View style={styles.actionText}>
+              <Text style={styles.actionTitle}>Nutrition</Text>
+              <Text style={styles.actionDescription}>
+                Prioritize carbohydrates and protein.
               </Text>
-              <Text style={styles.trainingLabel}>MOVING TIME</Text>
             </View>
 
-            <View style={styles.trainingMetricBorder}>
-              <Text style={styles.trainingValue}>
-                {trainingSummary.totalLoad}
+            <Text style={styles.actionArrow}>›</Text>
+          </View>
+
+          <View style={styles.actionRow}>
+            <Text style={styles.actionNumber}>03</Text>
+
+            <View style={styles.actionText}>
+              <Text style={styles.actionTitle}>Mobility</Text>
+              <Text style={styles.actionDescription}>
+                Keep movement easy for 5–10 minutes.
               </Text>
-              <Text style={styles.trainingLabel}>TRAINING LOAD</Text>
             </View>
+
+            <Text style={styles.actionArrow}>›</Text>
           </View>
         </View>
-      </>
-    )}
 
-    <Text style={styles.sectionTitle}>Today</Text>
+        <Text style={styles.sectionTitle}>Next session</Text>
 
-    <View style={styles.actionList}>
-      <View style={styles.actionRow}>
-        <Text style={styles.actionNumber}>01</Text>
+        <View style={styles.nextRideCard}>
+          <Text style={styles.nextRideEyebrow}>RECOMMENDATION</Text>
 
-        <View style={styles.actionText}>
-          <Text style={styles.actionTitle}>Hydration</Text>
-          <Text style={styles.actionDescription}>
-            Replace fluids throughout the day.
+          <Text style={styles.nextRideType}>
+            {recovery.rideType}
+          </Text>
+
+          <Text style={styles.nextRideDetails}>
+            {recovery.rideDetails}
+          </Text>
+
+          <Text style={styles.nextRideReason}>
+            {recovery.reason}
           </Text>
         </View>
 
-        <Text style={styles.actionArrow}>›</Text>
-      </View>
-
-      <View style={styles.actionRow}>
-        <Text style={styles.actionNumber}>02</Text>
-
-        <View style={styles.actionText}>
-          <Text style={styles.actionTitle}>Nutrition</Text>
-          <Text style={styles.actionDescription}>
-            Prioritize carbohydrates and protein.
-          </Text>
-        </View>
-
-        <Text style={styles.actionArrow}>›</Text>
-      </View>
-
-      <View style={styles.actionRow}>
-        <Text style={styles.actionNumber}>03</Text>
-
-        <View style={styles.actionText}>
-          <Text style={styles.actionTitle}>Mobility</Text>
-          <Text style={styles.actionDescription}>
-            Keep movement easy for 5–10 minutes.
-          </Text>
-        </View>
-
-        <Text style={styles.actionArrow}>›</Text>
-      </View>
-    </View>
-
-    <Text style={styles.sectionTitle}>Next session</Text>
-
-    <View style={styles.nextRideCard}>
-      <Text style={styles.nextRideEyebrow}>RECOMMENDATION</Text>
-
-      <Text style={styles.nextRideType}>
-        {recovery.rideType}
-      </Text>
-
-      <Text style={styles.nextRideDetails}>
-        {recovery.rideDetails}
-      </Text>
-
-      <Text style={styles.nextRideReason}>
-        {recovery.reason}
-      </Text>
-    </View>
-
-    <Text style={styles.disclaimer}>
-      Prototype guidance only. Perceived fatigue, pain, illness and other
-      health factors should take priority.
-    </Text>
+        <Text style={styles.disclaimer}>
+          Prototype guidance only. Perceived fatigue, pain, illness and other
+          health factors should take priority.
+        </Text>
       </ScrollView>
-  </SafeAreaView>
-);
+    </SafeAreaView>
+  );
 }
 
 const styles = StyleSheet.create({
   safeArea: {
-  flex: 1,
-  backgroundColor: '#09110F',
-},
+    flex: 1,
+    backgroundColor: '#09110F',
+  },
 
   screen: {
     flex: 1,
@@ -520,7 +536,7 @@ const styles = StyleSheet.create({
   },
 
   content: {
-    paddingTop: 28  ,
+    paddingTop: 28,
     paddingHorizontal: 24,
     paddingBottom: 60,
     width: '100%',
@@ -742,57 +758,57 @@ const styles = StyleSheet.create({
   },
 
   periodLabel: {
-  color: '#65766F',
-  fontSize: 10,
-  fontWeight: '700',
-  letterSpacing: 1,
-  marginTop: 34,
-},
+    color: '#65766F',
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1,
+    marginTop: 34,
+  },
 
-trainingCard: {
-  backgroundColor: '#101815',
-  borderRadius: 12,
-  borderWidth: 1,
-  borderColor: '#1B2924',
-  overflow: 'hidden',
-},
+  trainingCard: {
+    backgroundColor: '#101815',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#1B2924',
+    overflow: 'hidden',
+  },
 
-trainingRow: {
-  flexDirection: 'row',
-},
+  trainingRow: {
+    flexDirection: 'row',
+  },
 
-trainingMetric: {
-  flex: 1,
-  paddingVertical: 18,
-  paddingHorizontal: 18,
-},
+  trainingMetric: {
+    flex: 1,
+    paddingVertical: 18,
+    paddingHorizontal: 18,
+  },
 
-trainingMetricBorder: {
-  flex: 1,
-  paddingVertical: 18,
-  paddingHorizontal: 18,
-  borderLeftWidth: 1,
-  borderLeftColor: '#22302B',
-},
+  trainingMetricBorder: {
+    flex: 1,
+    paddingVertical: 18,
+    paddingHorizontal: 18,
+    borderLeftWidth: 1,
+    borderLeftColor: '#22302B',
+  },
 
-trainingDivider: {
-  height: 1,
-  backgroundColor: '#22302B',
-},
+  trainingDivider: {
+    height: 1,
+    backgroundColor: '#22302B',
+  },
 
-trainingValue: {
-  color: '#F3F6F4',
-  fontSize: 21,
-  fontWeight: '700',
-},
+  trainingValue: {
+    color: '#F3F6F4',
+    fontSize: 21,
+    fontWeight: '700',
+  },
 
-trainingLabel: {
-  color: '#687A74',
-  fontSize: 9,
-  fontWeight: '700',
-  letterSpacing: 1,
-  marginTop: 5,
-},
+  trainingLabel: {
+    color: '#687A74',
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 1,
+    marginTop: 5,
+  },
 
   rideMessage: {
     color: '#9AA9A4',
