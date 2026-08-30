@@ -11,6 +11,12 @@ export type SleepEntry = {
     savedAt: string;
 };
 
+export type RecoveryBreakdown = {
+    durationPoints: number;
+    qualityPoints: number;
+    loadPenalty: number;
+};
+
 export type RecoveryResult = {
     score: number;
     status: string;
@@ -18,6 +24,7 @@ export type RecoveryResult = {
     rideType: string;
     rideDetails: string;
     reason: string;
+    breakdown: RecoveryBreakdown;
 };
 
 export function calculateRecovery(
@@ -34,6 +41,11 @@ export function calculateRecovery(
             rideDetails: 'Log your sleep first',
             reason:
                 'RideReset needs sleep data before combining it with your recent training load.',
+            breakdown: {
+                durationPoints: 0,
+                qualityPoints: 0,
+                loadPenalty: 0,
+            },
         };
     }
 
@@ -54,9 +66,11 @@ export function calculateRecovery(
         Great: 25,
     };
 
+    const selectedQualityPoints = qualityPoints[sleep.quality];
+
     let score = Math.min(
         100,
-        40 + durationPoints + qualityPoints[sleep.quality]
+        40 + durationPoints + selectedQualityPoints
     );
 
     let loadPenalty = 0;
@@ -107,6 +121,11 @@ export function calculateRecovery(
             rideDetails: 'Tomorrow · 60–90 minutes',
             reason:
                 'Your sleep and recent training load support a normal session. Adjust if your legs feel unusually fatigued.',
+            breakdown: {
+                durationPoints,
+                qualityPoints: selectedQualityPoints,
+                loadPenalty,
+            },
         };
     }
 
@@ -119,6 +138,11 @@ export function calculateRecovery(
             rideDetails: 'Tomorrow · 45–60 minutes',
             reason:
                 'Your sleep and recent training load suggest keeping the next session conversational.',
+            breakdown: {
+                durationPoints,
+                qualityPoints: selectedQualityPoints,
+                loadPenalty,
+            },
         };
     }
 
@@ -131,6 +155,11 @@ export function calculateRecovery(
             rideDetails: 'Tomorrow · 30–45 minutes',
             reason:
                 'Your sleep and recent training load suggest reducing intensity while recovery continues.',
+            breakdown: {
+                durationPoints,
+                qualityPoints: selectedQualityPoints,
+                loadPenalty,
+            },
         };
     }
 
@@ -142,5 +171,10 @@ export function calculateRecovery(
         rideDetails: 'No structured training',
         reason:
             'Your recent training load and sleep suggest prioritizing recovery before another structured session.',
+        breakdown: {
+            durationPoints,
+            qualityPoints: selectedQualityPoints,
+            loadPenalty,
+        },
     };
 }

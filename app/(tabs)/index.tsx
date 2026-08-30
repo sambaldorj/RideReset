@@ -140,7 +140,10 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+      <ScrollView
+        style={styles.screen}
+        contentContainerStyle={styles.content}
+      >
         <StatusBar style="light" />
 
         <View style={styles.headerRow}>
@@ -149,6 +152,7 @@ export default function HomeScreen() {
         </View>
 
         <Text style={styles.heading}>Recovery</Text>
+
         <Text style={styles.subtitle}>
           Sleep and training readiness at a glance.
         </Text>
@@ -159,7 +163,10 @@ export default function HomeScreen() {
               <Text style={styles.score}>{recovery.score}</Text>
 
               <View style={styles.scoreMeta}>
-                <Text style={styles.cardLabel}>RECOVERY SCORE</Text>
+                <Text style={styles.cardLabel}>
+                  RECOVERY SCORE
+                </Text>
+
                 <Text
                   style={[
                     styles.recoveryStatus,
@@ -187,23 +194,31 @@ export default function HomeScreen() {
           <View style={styles.metricRow}>
             <View style={styles.metric}>
               <Text style={styles.metricLabel}>SLEEP</Text>
+
               <Text style={styles.metricValue}>
                 {sleep ? `${sleep.hours} hr` : 'Not logged'}
               </Text>
+
               <Text style={styles.metricSubvalue}>
-                {sleep ? sleep.quality : 'Add last night’s sleep'}
+                {sleep
+                  ? sleep.quality
+                  : 'Add last night’s sleep'}
               </Text>
             </View>
 
             <View style={styles.metricDivider} />
 
             <View style={styles.metric}>
-              <Text style={styles.metricLabel}>7-DAY LOAD</Text>
+              <Text style={styles.metricLabel}>
+                7-DAY LOAD
+              </Text>
+
               <Text style={styles.metricValue}>
                 {trainingSummary
                   ? trainingSummary.totalLoad
                   : '—'}
               </Text>
+
               <Text style={styles.metricSubvalue}>
                 {trainingSummary
                   ? `${trainingSummary.rideCount} rides`
@@ -213,9 +228,82 @@ export default function HomeScreen() {
           </View>
         </View>
 
+        <View style={styles.scoreBreakdown}>
+          <View style={styles.breakdownHeader}>
+            <Text style={styles.breakdownTitle}>
+              Why this score
+            </Text>
+
+            <Text style={styles.breakdownBase}>
+              BASE 40
+            </Text>
+          </View>
+
+          <View style={styles.breakdownRow}>
+            <View>
+              <Text style={styles.breakdownLabel}>
+                Sleep duration
+              </Text>
+
+              <Text style={styles.breakdownDetail}>
+                {sleep
+                  ? `${sleep.hours} hr logged`
+                  : 'Not logged'}
+              </Text>
+            </View>
+
+            <Text style={styles.breakdownPositive}>
+              +{recovery.breakdown.durationPoints}
+            </Text>
+          </View>
+
+          <View style={styles.breakdownDivider} />
+
+          <View style={styles.breakdownRow}>
+            <View>
+              <Text style={styles.breakdownLabel}>
+                Sleep quality
+              </Text>
+
+              <Text style={styles.breakdownDetail}>
+                {sleep ? sleep.quality : 'Not logged'}
+              </Text>
+            </View>
+
+            <Text style={styles.breakdownPositive}>
+              +{recovery.breakdown.qualityPoints}
+            </Text>
+          </View>
+
+          <View style={styles.breakdownDivider} />
+
+          <View style={styles.breakdownRow}>
+            <View>
+              <Text style={styles.breakdownLabel}>
+                7-day training load
+              </Text>
+
+              <Text style={styles.breakdownDetail}>
+                {trainingSummary
+                  ? `${trainingSummary.totalLoad} load`
+                  : 'Training data unavailable'}
+              </Text>
+            </View>
+
+            <Text style={styles.breakdownNegative}>
+              -{recovery.breakdown.loadPenalty}
+            </Text>
+          </View>
+        </View>
+
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Latest activity</Text>
-          <Text style={styles.sourcePill}>INTERVALS.ICU</Text>
+          <Text style={styles.sectionTitle}>
+            Latest activity
+          </Text>
+
+          <Text style={styles.sourcePill}>
+            INTERVALS.ICU
+          </Text>
         </View>
 
         <View style={styles.card}>
@@ -225,7 +313,8 @@ export default function HomeScreen() {
             </Text>
           ) : rideError ? (
             <Text style={styles.errorMessage}>
-              RideReset could not load your Intervals.icu activity.
+              RideReset could not load your Intervals.icu
+              activity.
             </Text>
           ) : ride ? (
             <>
@@ -242,34 +331,59 @@ export default function HomeScreen() {
                   <Text style={styles.statValue}>
                     {formatDistance(ride.distance)}
                   </Text>
-                  <Text style={styles.statLabel}>MILES</Text>
+
+                  <Text style={styles.statLabel}>
+                    MILES
+                  </Text>
                 </View>
 
-                <View style={[styles.statCell, styles.statCellBorder]}>
+                <View
+                  style={[
+                    styles.statCell,
+                    styles.statCellBorder,
+                  ]}
+                >
                   <Text style={styles.statValue}>
                     {formatDuration(ride.moving_time)}
                   </Text>
-                  <Text style={styles.statLabel}>MOVING</Text>
+
+                  <Text style={styles.statLabel}>
+                    MOVING
+                  </Text>
                 </View>
 
-                <View style={[styles.statCell, styles.statCellBorder]}>
+                <View
+                  style={[
+                    styles.statCell,
+                    styles.statCellBorder,
+                  ]}
+                >
                   <Text style={styles.statValue}>
-                    {averagePower ? `${Math.round(averagePower)} W` : '—'}
+                    {averagePower
+                      ? `${Math.round(averagePower)} W`
+                      : '—'}
                   </Text>
-                  <Text style={styles.statLabel}>AVG POWER</Text>
+
+                  <Text style={styles.statLabel}>
+                    AVG POWER
+                  </Text>
                 </View>
               </View>
 
               <View style={styles.rideMetaRow}>
                 <Text style={styles.rideMeta}>
                   {averageHeartRate
-                    ? `${Math.round(averageHeartRate)} bpm avg`
+                    ? `${Math.round(
+                        averageHeartRate
+                      )} bpm avg`
                     : 'Heart rate unavailable'}
                 </Text>
 
                 <Text style={styles.rideMeta}>
                   {ride.icu_training_load
-                    ? `Load ${Math.round(ride.icu_training_load)}`
+                    ? `Load ${Math.round(
+                        ride.icu_training_load
+                      )}`
                     : ''}
                 </Text>
               </View>
@@ -284,8 +398,13 @@ export default function HomeScreen() {
         {trainingSummary && (
           <>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Recent training</Text>
-              <Text style={styles.periodLabel}>LAST 7 DAYS</Text>
+              <Text style={styles.sectionTitle}>
+                Recent training
+              </Text>
+
+              <Text style={styles.periodLabel}>
+                LAST 7 DAYS
+              </Text>
             </View>
 
             <View style={styles.trainingCard}>
@@ -294,14 +413,22 @@ export default function HomeScreen() {
                   <Text style={styles.trainingValue}>
                     {trainingSummary.rideCount}
                   </Text>
-                  <Text style={styles.trainingLabel}>RIDES</Text>
+
+                  <Text style={styles.trainingLabel}>
+                    RIDES
+                  </Text>
                 </View>
 
-                <View style={styles.trainingMetricBorder}>
+                <View
+                  style={styles.trainingMetricBorder}
+                >
                   <Text style={styles.trainingValue}>
                     {trainingSummary.distanceMiles}
                   </Text>
-                  <Text style={styles.trainingLabel}>MILES</Text>
+
+                  <Text style={styles.trainingLabel}>
+                    MILES
+                  </Text>
                 </View>
               </View>
 
@@ -310,16 +437,26 @@ export default function HomeScreen() {
               <View style={styles.trainingRow}>
                 <View style={styles.trainingMetric}>
                   <Text style={styles.trainingValue}>
-                    {formatTrainingTime(trainingSummary.movingMinutes)}
+                    {formatTrainingTime(
+                      trainingSummary.movingMinutes
+                    )}
                   </Text>
-                  <Text style={styles.trainingLabel}>MOVING TIME</Text>
+
+                  <Text style={styles.trainingLabel}>
+                    MOVING TIME
+                  </Text>
                 </View>
 
-                <View style={styles.trainingMetricBorder}>
+                <View
+                  style={styles.trainingMetricBorder}
+                >
                   <Text style={styles.trainingValue}>
                     {trainingSummary.totalLoad}
                   </Text>
-                  <Text style={styles.trainingLabel}>TRAINING LOAD</Text>
+
+                  <Text style={styles.trainingLabel}>
+                    TRAINING LOAD
+                  </Text>
                 </View>
               </View>
             </View>
@@ -333,7 +470,10 @@ export default function HomeScreen() {
             <Text style={styles.actionNumber}>01</Text>
 
             <View style={styles.actionText}>
-              <Text style={styles.actionTitle}>Hydration</Text>
+              <Text style={styles.actionTitle}>
+                Hydration
+              </Text>
+
               <Text style={styles.actionDescription}>
                 Replace fluids throughout the day.
               </Text>
@@ -346,7 +486,10 @@ export default function HomeScreen() {
             <Text style={styles.actionNumber}>02</Text>
 
             <View style={styles.actionText}>
-              <Text style={styles.actionTitle}>Nutrition</Text>
+              <Text style={styles.actionTitle}>
+                Nutrition
+              </Text>
+
               <Text style={styles.actionDescription}>
                 Prioritize carbohydrates and protein.
               </Text>
@@ -359,7 +502,10 @@ export default function HomeScreen() {
             <Text style={styles.actionNumber}>03</Text>
 
             <View style={styles.actionText}>
-              <Text style={styles.actionTitle}>Mobility</Text>
+              <Text style={styles.actionTitle}>
+                Mobility
+              </Text>
+
               <Text style={styles.actionDescription}>
                 Keep movement easy for 5–10 minutes.
               </Text>
@@ -369,10 +515,14 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        <Text style={styles.sectionTitle}>Next session</Text>
+        <Text style={styles.sectionTitle}>
+          Next session
+        </Text>
 
         <View style={styles.nextRideCard}>
-          <Text style={styles.nextRideEyebrow}>RECOMMENDATION</Text>
+          <Text style={styles.nextRideEyebrow}>
+            RECOMMENDATION
+          </Text>
 
           <Text style={styles.nextRideType}>
             {recovery.rideType}
@@ -388,8 +538,8 @@ export default function HomeScreen() {
         </View>
 
         <Text style={styles.disclaimer}>
-          Prototype guidance only. Perceived fatigue, pain, illness and other
-          health factors should take priority.
+          Prototype guidance only. Perceived fatigue, pain,
+          illness and other health factors should take priority.
         </Text>
       </ScrollView>
     </SafeAreaView>
@@ -538,6 +688,71 @@ const styles = StyleSheet.create({
     color: '#74857F',
     fontSize: 12,
     marginTop: 3,
+  },
+
+  scoreBreakdown: {
+    marginTop: 12,
+    backgroundColor: '#0E1613',
+    borderWidth: 1,
+    borderColor: '#192621',
+    borderRadius: 10,
+    paddingHorizontal: 18,
+  },
+
+  breakdownHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 15,
+  },
+
+  breakdownTitle: {
+    color: '#DCE3E0',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+
+  breakdownBase: {
+    color: '#586A63',
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
+
+  breakdownRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 13,
+  },
+
+  breakdownLabel: {
+    color: '#C9D2CE',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+
+  breakdownDetail: {
+    color: '#66766F',
+    fontSize: 11,
+    marginTop: 3,
+  },
+
+  breakdownPositive: {
+    color: '#8EDB72',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+
+  breakdownNegative: {
+    color: '#D58A7E',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+
+  breakdownDivider: {
+    height: 1,
+    backgroundColor: '#1B2823',
   },
 
   sectionHeader: {
