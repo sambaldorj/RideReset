@@ -8,6 +8,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 type SleepQuality = 'Poor' | 'Fair' | 'Good' | 'Great';
 
@@ -72,6 +73,7 @@ export default function SleepScreen() {
   }
 
   return (
+  <SafeAreaView style={styles.safeArea} edges={['top']}>
     <ScrollView
       style={styles.screen}
       contentContainerStyle={styles.content}
@@ -199,18 +201,24 @@ export default function SleepScreen() {
         Sleep entries are stored locally on this device and used by
         RideReset when calculating recovery.
       </Text>
-    </ScrollView>
-  );
+        </ScrollView>
+  </SafeAreaView>
+);
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+  flex: 1,
+  backgroundColor: '#09110F',
+},
+
   screen: {
     flex: 1,
     backgroundColor: '#09110F',
   },
 
   content: {
-    paddingTop: 64,
+    paddingTop: 28,
     paddingHorizontal: 24,
     paddingBottom: 60,
     width: '100%',
