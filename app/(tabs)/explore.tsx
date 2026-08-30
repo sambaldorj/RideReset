@@ -9,14 +9,10 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-type SleepQuality = 'Poor' | 'Fair' | 'Good' | 'Great';
-
-type SleepEntry = {
-  hours: number;
-  quality: SleepQuality;
-  savedAt: string;
-};
+import type {
+  SleepEntry,
+  SleepQuality,
+} from '../../utils/recovery';
 
 const qualities: SleepQuality[] = ['Poor', 'Fair', 'Good', 'Great'];
 const STORAGE_KEY = 'ridereset.latestSleep';
@@ -73,144 +69,144 @@ export default function SleepScreen() {
   }
 
   return (
-  <SafeAreaView style={styles.safeArea} edges={['top']}>
-    <ScrollView
-      style={styles.screen}
-      contentContainerStyle={styles.content}
-    >
-      <StatusBar style="light" />
-
-      <Text style={styles.logo}>RIDERESET</Text>
-
-      <Text style={styles.heading}>Sleep</Text>
-
-      <Text style={styles.subtitle}>
-        Log last night’s sleep for today’s recovery estimate.
-      </Text>
-
-      <Text style={styles.sectionLabel}>DURATION</Text>
-
-      <View style={styles.durationCard}>
-        <Pressable
-          style={styles.controlButton}
-          onPress={() => changeHours(-0.5)}
-        >
-          <Text style={styles.controlText}>−</Text>
-        </Pressable>
-
-        <View style={styles.durationCenter}>
-          <Text style={styles.hours}>{hours}</Text>
-          <Text style={styles.hoursLabel}>hours</Text>
-        </View>
-
-        <Pressable
-          style={styles.controlButton}
-          onPress={() => changeHours(0.5)}
-        >
-          <Text style={styles.controlText}>+</Text>
-        </Pressable>
-      </View>
-
-      <View style={styles.durationScale}>
-        <Text style={styles.scaleText}>Less</Text>
-        <Text style={styles.scaleText}>Recommended 7–9 hr</Text>
-        <Text style={styles.scaleText}>More</Text>
-      </View>
-
-      <Text style={styles.sectionLabel}>SLEEP QUALITY</Text>
-
-      <View style={styles.qualityCard}>
-        {qualities.map((option, index) => (
-          <Pressable
-            key={option}
-            style={[
-              styles.qualityRow,
-              index < qualities.length - 1 && styles.qualityRowBorder,
-            ]}
-            onPress={() => {
-              setQuality(option);
-              setSaved(false);
-            }}
-          >
-            <View>
-              <Text
-                style={[
-                  styles.qualityText,
-                  quality === option && styles.qualityTextSelected,
-                ]}
-              >
-                {option}
-              </Text>
-
-              <Text style={styles.qualityDescription}>
-                {option === 'Poor' && 'Restless or significantly disrupted'}
-                {option === 'Fair' && 'Below your normal sleep quality'}
-                {option === 'Good' && 'Mostly restful and uninterrupted'}
-                {option === 'Great' && 'Deep, restful and refreshing'}
-              </Text>
-            </View>
-
-            <View
-              style={[
-                styles.radioOuter,
-                quality === option && styles.radioOuterSelected,
-              ]}
-            >
-              {quality === option && <View style={styles.radioInner} />}
-            </View>
-          </Pressable>
-        ))}
-      </View>
-
-      <Pressable
-        style={[
-          styles.saveButton,
-          saved && styles.saveButtonSaved,
-        ]}
-        onPress={saveSleep}
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <ScrollView
+        style={styles.screen}
+        contentContainerStyle={styles.content}
       >
-        <Text
-          style={[
-            styles.saveButtonText,
-            saved && styles.saveButtonTextSaved,
-          ]}
-        >
-          {saved ? 'Saved' : 'Save sleep'}
+        <StatusBar style="light" />
+
+        <Text style={styles.logo}>RIDERESET</Text>
+
+        <Text style={styles.heading}>Sleep</Text>
+
+        <Text style={styles.subtitle}>
+          Log last night’s sleep for today’s recovery estimate.
         </Text>
-      </Pressable>
 
-      {saved && (
-        <View style={styles.savedRow}>
-          <View style={styles.savedDot} />
+        <Text style={styles.sectionLabel}>DURATION</Text>
 
-          <View style={styles.savedContent}>
-            <Text style={styles.savedTitle}>
-              Last night
-            </Text>
+        <View style={styles.durationCard}>
+          <Pressable
+            style={styles.controlButton}
+            onPress={() => changeHours(-0.5)}
+          >
+            <Text style={styles.controlText}>−</Text>
+          </Pressable>
 
-            <Text style={styles.savedText}>
-              {hours} hr · {quality}
-            </Text>
+          <View style={styles.durationCenter}>
+            <Text style={styles.hours}>{hours}</Text>
+            <Text style={styles.hoursLabel}>hours</Text>
           </View>
 
-          <Text style={styles.savedMeta}>ON DEVICE</Text>
+          <Pressable
+            style={styles.controlButton}
+            onPress={() => changeHours(0.5)}
+          >
+            <Text style={styles.controlText}>+</Text>
+          </Pressable>
         </View>
-      )}
 
-      <Text style={styles.note}>
-        Sleep entries are stored locally on this device and used by
-        RideReset when calculating recovery.
-      </Text>
-        </ScrollView>
-  </SafeAreaView>
-);
+        <View style={styles.durationScale}>
+          <Text style={styles.scaleText}>Less</Text>
+          <Text style={styles.scaleText}>Recommended 7–9 hr</Text>
+          <Text style={styles.scaleText}>More</Text>
+        </View>
+
+        <Text style={styles.sectionLabel}>SLEEP QUALITY</Text>
+
+        <View style={styles.qualityCard}>
+          {qualities.map((option, index) => (
+            <Pressable
+              key={option}
+              style={[
+                styles.qualityRow,
+                index < qualities.length - 1 && styles.qualityRowBorder,
+              ]}
+              onPress={() => {
+                setQuality(option);
+                setSaved(false);
+              }}
+            >
+              <View>
+                <Text
+                  style={[
+                    styles.qualityText,
+                    quality === option && styles.qualityTextSelected,
+                  ]}
+                >
+                  {option}
+                </Text>
+
+                <Text style={styles.qualityDescription}>
+                  {option === 'Poor' && 'Restless or significantly disrupted'}
+                  {option === 'Fair' && 'Below your normal sleep quality'}
+                  {option === 'Good' && 'Mostly restful and uninterrupted'}
+                  {option === 'Great' && 'Deep, restful and refreshing'}
+                </Text>
+              </View>
+
+              <View
+                style={[
+                  styles.radioOuter,
+                  quality === option && styles.radioOuterSelected,
+                ]}
+              >
+                {quality === option && <View style={styles.radioInner} />}
+              </View>
+            </Pressable>
+          ))}
+        </View>
+
+        <Pressable
+          style={[
+            styles.saveButton,
+            saved && styles.saveButtonSaved,
+          ]}
+          onPress={saveSleep}
+        >
+          <Text
+            style={[
+              styles.saveButtonText,
+              saved && styles.saveButtonTextSaved,
+            ]}
+          >
+            {saved ? 'Saved' : 'Save sleep'}
+          </Text>
+        </Pressable>
+
+        {saved && (
+          <View style={styles.savedRow}>
+            <View style={styles.savedDot} />
+
+            <View style={styles.savedContent}>
+              <Text style={styles.savedTitle}>
+                Last night
+              </Text>
+
+              <Text style={styles.savedText}>
+                {hours} hr · {quality}
+              </Text>
+            </View>
+
+            <Text style={styles.savedMeta}>ON DEVICE</Text>
+          </View>
+        )}
+
+        <Text style={styles.note}>
+          Sleep entries are stored locally on this device and used by
+          RideReset when calculating recovery.
+        </Text>
+      </ScrollView>
+    </SafeAreaView>
+  );
 }
 
 const styles = StyleSheet.create({
   safeArea: {
-  flex: 1,
-  backgroundColor: '#09110F',
-},
+    flex: 1,
+    backgroundColor: '#09110F',
+  },
 
   screen: {
     flex: 1,
